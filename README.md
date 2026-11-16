@@ -14,9 +14,7 @@
 - `N8N_TOKEN` (Sensitive): igual al credential Header Auth del webhook (cabecera `X-HSM-Token`).
 - `ACCESS_CODE`: acceso temporal por código. Solo funciona mientras NO exista `GOOGLE_CLIENT_ID`. Borrarlo al activar Google.
 
-## URI de redirección autorizadas en Google (exactas, sin barra final)
+## URI de redirección autorizadas en Google
 - `https://generador-de-mensajes-hsm.vercel.app/api/auth/callback`
-- `https://generador-de-mensajes-hsm.adipa.ai/api/auth/callback`
+- `https://generador-de-mensajes-hsm.adipa.ai/api/auth/callback` (por configurar)
 
-Después de cambiar variables hay que volver a desplegar (`vercel --prod`).
-Para probar en local: `vercel dev` con las variables en `.env.local` (no se sube).
