@@ -27,7 +27,7 @@
   .panel h2 { margin: 0 0 14px; font-size: 16px; font-weight: 600; }
   label, legend { display: block; font-weight: 500; font-size: 13px; margin: 14px 0 4px; padding: 0; }
   label small { font-weight: 400; color: var(--muted); }
-  input[type=text], select, textarea { width: 100%; padding: 9px 10px; border: 1px solid #9ba7bd; border-radius: var(--radius); font: inherit; color: var(--navy); background: #fff; }
+  input[type=text], input[type=password], select, textarea { width: 100%; padding: 9px 10px; border: 1px solid #9ba7bd; border-radius: var(--radius); font: inherit; color: var(--navy); background: #fff; }
   textarea { resize: vertical; min-height: 84px; }
   :is(input, select, textarea, button, summary):focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -198,7 +198,7 @@
 
       <div class="seccion">
         <h3 class="paso"><span>3</span>Variables del mensaje</h3>
-        <p class="ayuda">Elige cuáles lleva este mensaje. Cada una se puede escribir ahora o dejar como <code>[[variable]]</code> para completarla al enviar.</p>
+        <p class="ayuda">Elige cuáles lleva este mensaje. Cada una se puede escribir ahora o dejar como <code>{{variable}}</code> para completarla al enviar.</p>
         <div id="variables"></div>
         <label for="addVar">Agregar variable</label>
         <select id="addVar"></select>
@@ -332,11 +332,11 @@
   function renderFilas() {
     $("variables").innerHTML = filas.length ? filas.map(f =>
       '<div class="var" data-c="' + esc(f.clave) + '">' +
-        '<div class="var-cab"><span class="var-nom">' + esc(f.etiqueta) + "<code>[[" + esc(f.clave) + "]]</code></span>" +
+        '<div class="var-cab"><span class="var-nom">' + esc(f.etiqueta) + "<code>{{" + esc(f.clave) + "}}</code></span>" +
         '<button type="button" class="quitar" data-quitar="' + esc(f.clave) + '" aria-label="Quitar ' + esc(f.etiqueta) + '">✕</button></div>' +
         '<div class="seg" role="group" aria-label="Cómo incluir ' + esc(f.etiqueta) + '">' +
           '<button type="button" class="seg-b" data-modo="valor" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "valor") + '">Escribir valor</button>' +
-          '<button type="button" class="seg-b" data-modo="placeholder" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "placeholder") + '">Dejar [[' + esc(f.clave) + "]]</button></div>" +
+          '<button type="button" class="seg-b" data-modo="placeholder" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "placeholder") + '">Dejar {{' + esc(f.clave) + "}}</button></div>" +
         (f.modo === "valor"
           ? (f.largo ? '<textarea class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '">' + esc(f.valor) + "</textarea>"
                      : '<input type="text" class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '" value="' + esc(f.valor) + '">')
