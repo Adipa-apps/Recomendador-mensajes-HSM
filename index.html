@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Generador de mensajes HSM · Adipa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #704EFD; --cyan: #2CB7FF; --soft: #F3F4FF; --navy: #091E42;
+    --lavender: #DFD5FF; --light-blue: #CBE8FF; --yellow: #FFC728; --green: #13631F;
+    --border: #E3E8F3; --muted: #5b6987; --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--soft); color: var(--navy); font-family: "Poppins", Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.5; }
+  header.top { background: var(--purple); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px 24px; flex-wrap: wrap; }
+  header.top h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header.top p { margin: 2px 0 0; font-size: 13px; opacity: .9; }
+  main { max-width: 1100px; margin: 24px auto; padding: 0 16px 48px; display: grid; grid-template-columns: minmax(300px, 440px) 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  .panel { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: 0 1px 3px rgb(9 30 66 / .12); }
+  .panel h2 { margin: 0 0 14px; font-size: 16px; font-weight: 600; }
+  label, legend { display: block; font-weight: 500; font-size: 13px; margin: 14px 0 4px; padding: 0; }
+  label small { font-weight: 400; color: var(--muted); }
+  input[type=text], select, textarea { width: 100%; padding: 9px 10px; border: 1px solid #9ba7bd; border-radius: var(--radius); font: inherit; color: var(--navy); background: #fff; }
+  textarea { resize: vertical; min-height: 84px; }
+  :is(input, select, textarea, button, summary):focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ayuda { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+  fieldset { border: 0; margin: 14px 0 0; padding: 0; min-width: 0; }
+  .alcance { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .alcance label { margin: 0; font-weight: 400; border: 1px solid #9ba7bd; border-radius: var(--radius); padding: 8px 10px; display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 13px; }
+  .alcance label:has(input:checked) { border-color: var(--purple); background: var(--soft); }
+  .alcance strong { display: block; font-weight: 600; }
+  .seccion { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 4px; }
+  .seccion > h3 { margin: 12px 0 0; font-size: 14px; font-weight: 600; }
+  .var { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-top: 10px; background: #fff; }
+  .var-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .var-nom { font-weight: 500; font-size: 13px; }
+  .var code { font-size: 12px; color: var(--purple); background: var(--soft); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+  .var select.modo { margin-top: 8px; font-size: 13px; padding: 6px 8px; }
+  .var .valor { margin-top: 8px; }
+  .var textarea.valor { min-height: 70px; }
+  .quitar { border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; padding: 4px 8px; border-radius: var(--radius); }
+  .quitar:hover { background: var(--soft); color: var(--navy); }
+  .nueva-var { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--purple); border-radius: var(--radius); background: var(--soft); }
+  .nueva-var .fila { display: flex; gap: 8px; align-items: center; }
+  .nueva-var .chk { display: flex; gap: 6px; align-items: center; font-weight: 400; margin: 8px 0 0; }
+  button { font: inherit; cursor: pointer; }
+  button.principal { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: var(--radius); background: var(--purple); color: #fff; font-weight: 600; }
+  button.principal:hover { background: rgba(112, 78, 253, .85); }
+  button:disabled { background: #9ba7bd !important; border-color: #9ba7bd !important; color: #fff !important; cursor: wait; }
+  .error { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius); background: #fff; border: 1px solid var(--border); border-left: 4px solid #F61710; font-size: 13px; }
+  .vacio { color: var(--muted); text-align: center; padding: 48px 16px; }
+  .vacio strong { display: block; color: var(--navy); font-size: 16px; margin-bottom: 4px; }
+  .aviso-global { background: var(--light-blue); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; margin-bottom: 14px; }
+  .nombre-card { border: 1px solid var(--lavender); background: var(--soft); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; }
+  .nombre-card .rot { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .nombre-card .fila { display: flex; gap: 8px; align-items: center; }
+  .nombre-card input { font-weight: 500; }
+  .variante { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+  .variante.elegida { border: 2px solid var(--purple); padding: 13px; }
+  .variante .cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .variante h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .variante .insignia { font-size: 12px; font-weight: 600; color: var(--green); margin-left: 8px; }
+  .variante textarea { min-height: 150px; line-height: 1.5; }
+  .variante .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .btn { border: 1px solid var(--purple); background: #fff; color: var(--purple); border-radius: var(--radius); padding: 6px 14px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { background: var(--soft); }
+  .btn.lleno { background: var(--purple); color: #fff; }
+  .btn.lleno:hover { background: rgba(112, 78, 253, .85); }
+  .btn.ok { background: var(--purple); color: #fff; }
+  .confirm { margin-top: 10px; padding: 10px 12px; border-radius: var(--radius); background: var(--soft); border: 1px solid var(--lavender); font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .confirm .txt { flex: 1 1 200px; }
+  .avisos { margin: 10px 0 0; padding: 8px 12px; list-style: none; border-left: 4px solid var(--yellow); background: var(--soft); border-radius: 0 var(--radius) var(--radius) 0; font-size: 12.5px; }
+  .avisos li + li { margin-top: 4px; }
+  .contador.largo { color: #F61710; font-weight: 600; }
+  .mas { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 14px; }
+  .mas p { margin: 0 0 8px; font-weight: 500; font-size: 14px; }
+  .mas .fila { display: flex; gap: 8px; }
+  .mas input { flex: 1; }
+  details { margin-top: 10px; font-size: 13px; }
+  summary { cursor: pointer; font-weight: 500; }
+  details ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -2px; margin-right: 8px; animation: giro .8s linear infinite; }
+  @keyframes giro { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+  .paso { display: flex; align-items: center; gap: 10px; margin: 22px 0 0; font-size: 14px; font-weight: 600; }
+  .paso:first-of-type { margin-top: 0; }
+  .paso span { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--purple); color: #fff; font-size: 12px; font-weight: 600; align-items: center; justify-content: center; flex: none; }
+  .seccion > h3.paso { margin-top: 12px; }
+  .seg { display: inline-flex; margin-top: 8px; border: 1px solid #9ba7bd; border-radius: var(--radius); overflow: hidden; max-width: 100%; }
+  .seg-b { border: 0; background: #fff; color: var(--navy); font-size: 12.5px; padding: 6px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seg-b + .seg-b { border-left: 1px solid #9ba7bd; }
+  .seg-b:hover { background: var(--soft); }
+  .seg-b[aria-pressed="true"] { background: var(--purple); color: #fff; font-weight: 500; }
+  .seg-b:focus-visible { outline-offset: -3px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; background: var(--purple); }
+  .dot.cercano { background: var(--cyan); }
+  .dot.breve { background: var(--navy); }
+  .vacio .pasos { list-style: none; margin: 18px auto 0; padding: 0; max-width: 320px; text-align: left; font-size: 13px; }
+  .vacio .pasos li { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; }
+  .vacio .pasos span { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--lavender); color: var(--purple); font-weight: 600; font-size: 12px; align-items: center; justify-content: center; flex: none; }
+  .sk { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+  .sk i { display: block; height: 12px; border-radius: 6px; margin-bottom: 10px; background: linear-gradient(90deg, var(--soft) 25%, var(--lavender) 50%, var(--soft) 75%); background-size: 200% 100%; animation: brillo 1.4s ease-in-out infinite; }
+  .sk i:nth-child(1) { width: 30%; height: 14px; } .sk i:nth-child(3) { width: 85%; } .sk i:nth-child(4) { width: 60%; margin-bottom: 0; }
+  @keyframes brillo { to { background-position: -200% 0; } }
+  .estado-gen { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  @media (prefers-reduced-motion: reduce) { .sk i { animation: none; } }
+  .gate { position: fixed; inset: 0; background: rgb(9 30 66 / .55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .gate[hidden] { display: none; }
+  .gate .caja { background: #fff; border-radius: var(--radius); padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 8px 24px rgb(9 30 66 / .3); }
+  .gate h2 { margin: 0 0 4px; font-size: 17px; }
+  .gate p { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+  .gate .error { margin-top: 10px; }
+  #usuario { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  #usuario[hidden] { display: none; }
+  #usuario button { border: 1px solid rgb(255 255 255 / .7); background: transparent; color: #fff; border-radius: var(--radius); padding: 5px 12px; font-size: 12.5px; }
+  #usuario button:hover { background: rgb(255 255 255 / .15); }
+  #gbtn { display: flex; justify-content: center; min-height: 44px; margin-top: 14px; }
+  #gbtn[hidden], #codigoForm[hidden] { display: none; }
+  a.btn-google { display: block; width: 100%; padding: 12px; margin: 0; border-radius: var(--radius); background: var(--purple); color: #fff; font-weight: 600; text-align: center; text-decoration: none; }
+  a.btn-google:hover { background: rgba(112, 78, 253, .85); }
+  a.btn-google:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div id="gate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gateT" hidden>
+  <div class="caja">
+    <h2 id="gateT">Acceso al generador</h2>
+    <p id="gateTxt">Cargando…</p>
+    <div id="gbtn" hidden><a class="principal btn-google" href="/api/auth/login">Iniciar sesión con Google</a></div>
+    <form id="codigoForm" hidden>
+      <label for="codigo">Código de acceso</label>
+      <input id="codigo" type="password" autocomplete="current-password">
+      <label for="nombreAcc">Tu nombre <small>(para saber quién generó cada mensaje)</small></label>
+      <input id="nombreAcc" type="text" maxlength="60">
+      <button class="principal" type="submit">Entrar</button>
+    </form>
+    <div id="gateError" class="error" role="alert" hidden></div>
+  </div>
+</div>
+<header class="top">
+  <div>
+    <h1>Generador de mensajes HSM</h1>
+    <p>Elige las variables del mensaje y recibe tres versiones basadas en los que mejor han funcionado.</p>
+  </div>
+  <div id="usuario" hidden><span id="usuarioEmail"></span><button type="button" id="salir">Cerrar sesión</button></div>
+</header>
+
+<main>
+  <section class="panel" aria-labelledby="t-form">
+    <h2 id="t-form">Datos del mensaje</h2>
+    <form id="form" novalidate>
+      <h3 class="paso"><span>1</span>¿Qué mensaje necesitas?</h3>
+      <div class="row">
+        <div>
+          <label for="pais">País</label>
+          <select id="pais"><option value="">Cargando…</option></select>
+        </div>
+        <div>
+          <label for="tipo">Tipo de mensaje</label>
+          <select id="tipo"><option value="">Cargando…</option></select>
+        </div>
+      </div>
+      <div id="bloqueNuevoPais" hidden>
+        <div class="row">
+          <div><label for="paisCodigo">Código del país</label><input id="paisCodigo" type="text" maxlength="3" placeholder="Ej: PE"></div>
+          <div><label for="paisNombre">Nombre del país</label><input id="paisNombre" type="text" maxlength="40" placeholder="Ej: Perú"></div>
+        </div>
+        <p class="ayuda">Queda guardado para todo el equipo. Sin guía de lenguaje propia, el mensaje se redacta en español neutro.</p>
+      </div>
+      <div id="bloqueNuevo" hidden>
+        <label for="tipoNuevo">Nombre del tipo nuevo</label>
+        <input id="tipoNuevo" type="text" maxlength="25" placeholder="Ej: Recordatorio de pago">
+        <p class="ayuda">Queda guardado para todo el equipo, con las variables que dejes elegidas abajo como predeterminadas. Al inicio no tendrá mensajes históricos de referencia.</p>
+      </div>
+
+      <fieldset>
+        <legend>¿Para qué es el mensaje?</legend>
+        <div class="alcance">
+          <label><input type="radio" name="alcance" value="especifico" checked><span><strong>Un programa específico</strong>Con sus datos ya escritos</span></label>
+          <label><input type="radio" name="alcance" value="generico"><span><strong>Un tipo de programa</strong>Plantilla con variables</span></label>
+        </div>
+      </fieldset>
+
+      <h3 class="paso"><span>2</span>¿Qué quieres comunicar?</h3>
+      <label for="programa" id="lblPrograma">Programa</label>
+      <input id="programa" type="text" placeholder="Ej: Diplomado en Terapia Cognitivo Conductual">
+
+      <label for="descripcion">Descripción corta <small>(qué quieres comunicar)</small></label>
+      <textarea id="descripcion" maxlength="500" placeholder="Ej: Últimas horas de lanzamiento con precio especial."></textarea>
+
+      <div class="seccion">
+        <h3 class="paso"><span>3</span>Variables del mensaje</h3>
+        <p class="ayuda">Elige cuáles lleva este mensaje. Cada una se puede escribir ahora o dejar como <code>[[variable]]</code> para completarla al enviar.</p>
+        <div id="variables"></div>
+        <label for="addVar">Agregar variable</label>
+        <select id="addVar"></select>
+        <div id="nuevaVar" class="nueva-var" hidden>
+          <label for="nvNombre" style="margin-top:0">Nombre de la variable nueva</label>
+          <div class="fila">
+            <input id="nvNombre" type="text" maxlength="40" placeholder="Ej: Fecha de la sesión en vivo">
+            <button type="button" class="btn lleno" id="nvCrear">Crear</button>
+          </div>
+          <label class="chk"><input type="checkbox" id="nvLargo"> Es un texto largo</label>
+          <p class="ayuda">Queda en el catálogo para todo el equipo.</p>
+        </div>
+      </div>
+
+      <button class="principal" id="btn" type="submit">Generar mensajes</button>
+      <div id="error" class="error" role="alert" hidden></div>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="t-res" aria-live="polite">
+    <h2 id="t-res">Mensajes sugeridos</h2>
+    <div id="resultado">
+      <div class="vacio" id="vacio"><strong>Aún no hay mensajes</strong>Completa el formulario y presiona “Generar mensajes”.
+        <ol class="pasos"><li><span>1</span>Elige país, tipo y si es para un programa o una plantilla.</li><li><span>2</span>Describe qué quieres comunicar y elige las variables.</li><li><span>3</span>Edita la versión que más te guste, cópiala y guárdala.</li></ol></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Las llamadas pasan por la función de Vercel (api/n8n.js): verifica la sesión y oculta el webhook de n8n
+  const API_URL = "/api/n8n";
+  const getCodigo = () => { try { return localStorage.getItem("hsm_codigo") || ""; } catch (_) { return ""; } };
+  const getNombre = () => { try { return localStorage.getItem("hsm_nombre") || ""; } catch (_) { return ""; } };
+  let modoAcceso = "";   // "google" (producción: sesión en cookie) o "codigo" (temporal, mientras no exista el Client ID)
+  let correoSesion = "";
+  function limpiarSesion() {
+    try { localStorage.removeItem("hsm_codigo"); } catch (_) {}
+    correoSesion = ""; const u = document.getElementById("usuario"); if (u) u.hidden = true;
+  }
+
+  // Respaldos por si n8n no responde al cargar la página (las claves son provisorias hasta tener la lista del equipo)
+  const PAISES_RESPALDO = [{ codigo: "CL", nombre: "Chile" }, { codigo: "CO", nombre: "Colombia" }, { codigo: "MX", nombre: "México" }, { codigo: "AR", nombre: "Argentina" }];
+  const TIPOS_RESPALDO = [
+    ["FLASH", "Descuento flash", ["oferta", "cupon", "vigencia", "pago"]], ["PRECIO", "Cambio de precio", ["precio", "vigencia", "pago"]],
+    ["CAMPAÑA", "Campaña puntual", ["brief", "duracion", "dias_cupon", "cupon"]], ["INICIO", "Inicio de programa", ["fecha_inicio", "pago"]],
+    ["COMPLEMENTARIA", "Base complementaria", ["oferta", "pago"]], ["VERSIÓN", "Versión anterior", ["fecha_inicio", "oferta"]],
+    ["VISITA", "Visita al sitio web", []], ["CARRO", "Carro abandonado", []], ["EBOOK", "Descarga de ebook", []],
+    ["SEMINARIO", "Asistentes a seminario", []], ["CLICK", "Click en correo", []], ["APERTURA", "Apertura de correo", []],
+    ["FAVORITO", "Favoritos", []], ["NUTRICION", "Nutrición", []], ["INFO", "Respuesta a solicitud de info", []],
+  ].map(([tipo, etiqueta, variables]) => ({ tipo, etiqueta, variables }));
+  const CATALOGO_RESPALDO = [
+    ["nombre_programa", "Nombre del programa"], ["url_programa", "URL del programa"], ["precio", "Precio"], ["oferta", "Oferta o descuento"],
+    ["cupon", "Cupón"], ["vigencia", "Vigencia o fecha límite"], ["pago", "Facilidades de pago"], ["fecha_inicio", "Fecha de inicio"],
+    ["coordinadora", "Coordinadora académica"], ["brief", "Brief de la campaña", true], ["duracion", "Duración de la campaña"],
+    ["dias_cupon", "Días con cupón adicional"], ["notas", "Notas adicionales", true],
+  ].map(([clave, etiqueta, largo]) => ({ clave, etiqueta, largo: !!largo }));
+  const PRESET_GENERICO = ["nombre_programa", "url_programa", "precio", "coordinadora"];
+
+  const $ = id => document.getElementById(id);
+  const form = $("form"), btn = $("btn"), err = $("error"), out = $("resultado");
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const uuid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const mostrarError = m => { err.textContent = m; err.hidden = false; };
+
+  let S = null, t0Form = null;
+  const VACIO_HTML = $("resultado").innerHTML;
+  function scrollAResultados() {
+    if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches && out.scrollIntoView)
+      out.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
+  form.addEventListener("input", () => { if (!t0Form) t0Form = Date.now(); });
+
+  async function api(accion, payload, ms = 90000) {
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (modoAcceso === "codigo") {
+        const c = getCodigo(); if (!c) { mostrarGate(""); throw new Error("Ingresa el código de acceso para continuar."); }
+        headers["x-codigo"] = c; headers["x-nombre"] = encodeURIComponent(getNombre());
+      }   // en modo Google la sesión viaja sola en una cookie segura
+      const r = await fetch(API_URL, { method: "POST", headers, body: JSON.stringify({ accion, ...payload }), signal: ctrl.signal });
+      if (r.status === 401) { limpiarSesion(); mostrarGate(modoAcceso === "codigo" ? "Código incorrecto." : "Tu sesión expiró. Vuelve a entrar con tu cuenta de Adipa."); throw new Error("Sesión no válida."); }
+      if (r.status === 403) { limpiarSesion(); mostrarGate("Tu cuenta no tiene acceso a esta herramienta."); throw new Error("Sin acceso."); }
+      if (!r.ok) throw new Error("El servidor respondió " + r.status + ".");
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || "No se pudo completar la acción.");
+      return d;
+    } catch (ex) {
+      if (ex.name === "AbortError") throw new Error("Tardó más de lo esperado. Intenta de nuevo.");
+      throw ex;
+    } finally { clearTimeout(timer); }
+  }
+
+  // ================= Catálogos (vienen de n8n) =================
+  let catalogo = CATALOGO_RESPALDO, tipoDef = {};
+  const defsDe = t => tipoDef[t] || [];
+  function llenarTipos(lista, elegir) {
+    lista.forEach(t => { tipoDef[t.tipo] = t.variables || []; });
+    const sel = $("tipo"), actual = elegir || sel.value;
+    sel.innerHTML = '<option value="">Elige un tipo</option>' +
+      lista.map(t => '<option value="' + esc(t.tipo) + '">' + esc(t.etiqueta || t.tipo) + (t.estado === "NUEVO" ? " (nuevo)" : "") + "</option>").join("") +
+      '<option value="__nuevo__">＋ Crear tipo nuevo…</option>';
+    if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
+  }
+  function llenarPaises(lista, elegir) {
+    const sel = $("pais"), actual = elegir || sel.value;
+    sel.innerHTML = '<option value="">Elige un país</option>' +
+      lista.map(p => '<option value="' + esc(p.codigo) + '">' + esc(p.nombre || p.codigo) + (p.estado === "NUEVO" ? " (nuevo)" : "") + "</option>").join("") +
+      '<option value="__nuevo__">＋ Crear país nuevo…</option>';
+    if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
+  }
+
+  // ================= Variables modulares =================
+  let filas = [];   // { clave, etiqueta, largo, modo: "valor" | "placeholder", valor, manual }
+  const alcance = () => (document.querySelector('input[name="alcance"]:checked') || {}).value || "especifico";
+  const modoDefecto = () => alcance() === "generico" ? "placeholder" : "valor";
+  const buscarVar = c => catalogo.find(v => v.clave === c);
+
+  function agregarFila(clave, manual) {
+    if (filas.some(f => f.clave === clave)) return;
+    const v = buscarVar(clave); if (!v) return;
+    filas.push({ clave, etiqueta: v.etiqueta, largo: !!v.largo, modo: modoDefecto(), valor: "", manual: !!manual });
+  }
+  function renderAgregar() {
+    const libres = catalogo.filter(v => !filas.some(f => f.clave === v.clave))
+      .sort((a, b) => String(a.etiqueta).localeCompare(String(b.etiqueta), "es", { sensitivity: "base" }));
+    $("addVar").innerHTML = '<option value="">Elige una variable…</option>' +
+      libres.map(v => '<option value="' + esc(v.clave) + '">' + esc(v.etiqueta) + (v.estado === "NUEVA" ? " (nueva)" : "") + "</option>").join("") +
+      '<option value="__nueva__">＋ Crear variable nueva…</option>';
+  }
+  function renderFilas() {
+    $("variables").innerHTML = filas.length ? filas.map(f =>
+      '<div class="var" data-c="' + esc(f.clave) + '">' +
+        '<div class="var-cab"><span class="var-nom">' + esc(f.etiqueta) + "<code>[[" + esc(f.clave) + "]]</code></span>" +
+        '<button type="button" class="quitar" data-quitar="' + esc(f.clave) + '" aria-label="Quitar ' + esc(f.etiqueta) + '">✕</button></div>' +
+        '<div class="seg" role="group" aria-label="Cómo incluir ' + esc(f.etiqueta) + '">' +
+          '<button type="button" class="seg-b" data-modo="valor" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "valor") + '">Escribir valor</button>' +
+          '<button type="button" class="seg-b" data-modo="placeholder" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "placeholder") + '">Dejar [[' + esc(f.clave) + "]]</button></div>" +
+        (f.modo === "valor"
+          ? (f.largo ? '<textarea class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '">' + esc(f.valor) + "</textarea>"
+                     : '<input type="text" class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '" value="' + esc(f.valor) + '">')
+          : "") +
+      "</div>").join("") : '<p class="ayuda">Este tipo no trae variables predeterminadas. Agrega las que necesites.</p>';
+    renderAgregar();
+  }
+  function sincronizarTipo() {
+    filas = filas.filter(f => f.manual || f.valor);
+    defsDe($("tipo").value).forEach(c => agregarFila(c, false));
+    renderFilas();
+  }
+  function aplicarAlcance() {
+    const gen = alcance() === "generico";
+    $("lblPrograma").textContent = gen ? "Tipo de programa" : "Programa";
+    $("programa").placeholder = gen ? "Ej: Diplomados" : "Ej: Diplomado en Terapia Cognitivo Conductual";
+    if (gen) PRESET_GENERICO.forEach(c => agregarFila(c, true));
+    filas.forEach(f => { f.modo = gen ? "placeholder" : "valor"; });
+    renderFilas();
+  }
+
+  $("variables").addEventListener("input", e => {
+    const c = e.target.dataset && e.target.dataset.valor; if (!c) return;
+    const f = filas.find(x => x.clave === c); f.valor = e.target.value; if (f.valor) f.manual = true;
+  });
+  $("variables").addEventListener("click", e => {
+    const b = e.target.closest("[data-modo]"); if (!b) return;
+    const f = filas.find(x => x.clave === b.dataset.c); if (!f || f.modo === b.dataset.modo) return;
+    f.modo = b.dataset.modo; renderFilas();
+    const campo = document.querySelector('[data-valor="' + f.clave + '"]'); if (campo) campo.focus();
+  });
+  $("variables").addEventListener("click", e => {
+    const b = e.target.closest("[data-quitar]"); if (!b) return;
+    filas = filas.filter(f => f.clave !== b.dataset.quitar); renderFilas();
+  });
+  $("addVar").addEventListener("change", () => {
+    const v = $("addVar").value;
+    if (v === "__nueva__") { $("nuevaVar").hidden = false; $("nvNombre").focus(); $("addVar").value = ""; return; }
+    if (v) { agregarFila(v, true); renderFilas(); }
+  });
+  $("nvCrear").addEventListener("click", async () => {
+    const nombre = $("nvNombre").value.trim(); err.hidden = true;
+    if (nombre.length < 3) return mostrarError("Escribe un nombre de al menos 3 letras para la variable.");
+    cargando($("nvCrear"), true, "Creando…");
+    try {
+      const d = await api("crear_variable", { etiqueta: nombre, largo: $("nvLargo").checked }, 30000);
+      catalogo = d.variables; agregarFila(d.variable.clave, true); renderFilas();
+      $("nvNombre").value = ""; $("nvLargo").checked = false; $("nuevaVar").hidden = true;
+    } catch (ex) { mostrarError("No se pudo crear la variable: " + ex.message); }
+    finally { cargando($("nvCrear"), false, "Crear"); }
+  });
+  document.querySelectorAll('input[name="alcance"]').forEach(r => r.addEventListener("change", aplicarAlcance));
+  $("tipo").addEventListener("change", () => { $("bloqueNuevo").hidden = $("tipo").value !== "__nuevo__"; if ($("tipo").value !== "__nuevo__") sincronizarTipo(); });
+  $("pais").addEventListener("change", () => { $("bloqueNuevoPais").hidden = $("pais").value !== "__nuevo__"; });
+
+  llenarTipos(TIPOS_RESPALDO); llenarPaises(PAISES_RESPALDO); renderFilas();
+  function cargarCatalogos() {
+    return api("tipos", {}, 20000).then(d => {
+      llenarTipos(d.tipos); if (d.paises) llenarPaises(d.paises); if (d.variables) { catalogo = d.variables; renderFilas(); }
+    }).catch(() => {});
+  }
+  function mostrarGate(msg) {
+    $("gate").hidden = false; $("gateError").hidden = !msg; $("gateError").textContent = msg || "";
+    $("gbtn").hidden = modoAcceso !== "google"; $("codigoForm").hidden = modoAcceso !== "codigo";
+    if (modoAcceso) $("gateTxt").textContent = modoAcceso === "codigo" ? "Ingresa el código de acceso del equipo comercial." : "Inicia sesión con tu cuenta de Google de Adipa.";
+    if (modoAcceso === "codigo") { $("codigo").value = ""; $("nombreAcc").value = getNombre(); $("codigo").focus(); }
+  }
+  function mostrarUsuario() {
+    let txt = "";
+    if (modoAcceso === "google") txt = correoSesion;
+    else if (modoAcceso === "codigo" && getCodigo()) txt = getNombre() || "Acceso con código";
+    $("usuarioEmail").textContent = txt; $("usuario").hidden = !txt;
+  }
+  $("codigoForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const c = $("codigo").value.trim(); if (!c) return;
+    try { localStorage.setItem("hsm_codigo", c); localStorage.setItem("hsm_nombre", $("nombreAcc").value.trim()); } catch (_) {}
+    $("gate").hidden = true; mostrarUsuario(); cargarCatalogos();
+  });
+  const MENSAJES_ERROR = {
+    dominio: "Tu cuenta no tiene acceso. Usa tu correo institucional de Adipa.",
+    cancelado: "Se canceló el inicio de sesión. Puedes intentarlo de nuevo.",
+    estado: "No se pudo validar el inicio de sesión. Inténtalo de nuevo.",
+    config: "El acceso no está configurado en el servidor. Avisa al equipo de Proyectos.",
+  };
+  async function iniciarAcceso() {
+    let cfg = {};
+    try { cfg = await (await fetch("/api/config")).json(); } catch (_) {}
+    modoAcceso = cfg.modo || "";
+    const motivo = new URLSearchParams(location.search).get("error");
+    if (motivo) history.replaceState(null, "", location.pathname);   // limpia la URL
+    if (modoAcceso === "codigo") { if (getCodigo()) { mostrarUsuario(); cargarCatalogos(); } else mostrarGate(""); return; }
+    if (modoAcceso !== "google" || !cfg.configurado) return mostrarGate(MENSAJES_ERROR.config);
+    try {
+      const r = await fetch("/api/auth/me");
+      if (r.ok) { correoSesion = (await r.json()).email || ""; mostrarUsuario(); cargarCatalogos(); return; }
+    } catch (_) {}
+    mostrarGate(motivo ? (MENSAJES_ERROR[motivo] || MENSAJES_ERROR.estado) : "");
+  }
+  $("salir").addEventListener("click", async () => {
+    if (modoAcceso === "google") { try { await fetch("/api/auth/logout", { method: "POST" }); } catch (_) {} }
+    limpiarSesion(); mostrarGate(""); S = null; out.innerHTML = VACIO_HTML;
+  });
+  iniciarAcceso();
+  $("pais").addEventListener("change", () => { try { if ($("pais").value && $("pais").value !== "__nuevo__") localStorage.setItem("hsm_pais", $("pais").value); } catch (_) {} });
+  const paisGuardado = (() => { try { return localStorage.getItem("hsm_pais") || ""; } catch (_) { return ""; } })();
+  if (paisGuardado) llenarPaises(PAISES_RESPALDO, paisGuardado);
+
+  // ================= Generar (primera tanda) =================
+  const nuevaSesion = () => ({ id: uuid(), regen: 0, ctx: null, tandas: [], vars: {}, k: 0, previos: [], nombre: "", elegida: null, guardado: {}, aviso: null, ejemplos: [], sinGuia: false });
+  function cargando(b, on, texto) { b.disabled = on; b.innerHTML = on ? '<span class="spinner"></span>' + esc(texto) : esc(texto); }
+  const varsPayload = () => filas.map(f => ({ clave: f.clave, etiqueta: f.etiqueta, modo: f.modo, valor: f.modo === "valor" ? f.valor.trim() : "" }));
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault(); err.hidden = true;
+    const datos = {
+      pais: $("pais").value, tipo: $("tipo").value, alcance: alcance(), programa: $("programa").value.trim(),
+      descripcion: $("descripcion").value.trim(), variables: varsPayload(),
+    };
+    const faltan = [];
+    if (!datos.pais) faltan.push("país");
+    if (datos.pais === "__nuevo__" && ($("paisCodigo").value.trim().length < 2 || $("paisNombre").value.trim().length < 3)) faltan.push("código y nombre del país nuevo");
+    if (!datos.tipo) faltan.push("tipo de mensaje");
+    if (datos.tipo === "__nuevo__" && $("tipoNuevo").value.trim().length < 3) faltan.push("nombre del tipo nuevo");
+    if (!datos.programa) faltan.push(datos.alcance === "generico" ? "tipo de programa" : "programa");
+    if (!datos.descripcion) faltan.push("descripción corta");
+    const sinValor = datos.variables.filter(v => v.modo === "valor" && !v.valor).map(v => v.etiqueta);
+    if (sinValor.length) faltan.push("el valor de " + sinValor.join(", ") + " (o déjala como marcador, o quítala)");
+    if (faltan.length) return mostrarError("Completa: " + faltan.join("; ") + ".");
+
+    S = nuevaSesion(); S.t0 = t0Form || Date.now(); S.ctx = datos;
+    cargando(btn, true, "Generando…");
+    out.innerHTML = '<p class="estado-gen">Redactando tus mensajes. Tarda unos segundos.</p>' + '<div class="sk"><i></i><i></i><i></i><i></i></div>'.repeat(3);
+    scrollAResultados();
+    try {
+      if (datos.pais === "__nuevo__") {
+        const p = await api("crear_pais", { pais_codigo: $("paisCodigo").value.trim(), pais_nombre: $("paisNombre").value.trim() }, 30000);
+        S.ctx.pais = p.pais; llenarPaises(p.paises, p.pais); $("bloqueNuevoPais").hidden = true; $("paisCodigo").value = ""; $("paisNombre").value = "";
+      }
+      if (datos.tipo === "__nuevo__") {
+        const t = await api("crear_tipo", { tipo_nuevo: $("tipoNuevo").value.trim(), variables: datos.variables.map(v => v.clave) }, 30000);
+        S.ctx.tipo = t.tipo; llenarTipos(t.tipos, t.tipo); $("bloqueNuevo").hidden = true; $("tipoNuevo").value = "";
+      }
+      await pedirTanda("");
+    } catch (ex) {
+      if (!S.tandas.length) out.innerHTML = VACIO_HTML;
+      mostrarError("No se pudo generar: " + ex.message + " Si se repite, avisa al equipo de Proyectos.");
+    } finally { cargando(btn, false, "Generar mensajes"); }
+  });
+
+  async function pedirTanda(indicacion) {
+    const d = await api("generar", { ...S.ctx, id_generacion: S.id, previos: S.previos, indicacion });
+    S.nombre = d.nombre_campana; S.aviso = d.sin_ejemplos ? "sin" : d.mezcla_paises ? "mezcla" : null; S.sinGuia = !!d.pais_sin_guia;
+    S.ejemplos = d.ejemplos || []; S.pais = d.pais; S.tipo = d.tipo;
+    const ids = d.variantes.map(v => { const k = S.k++; S.vars[k] = { nombre: v.nombre, original: v.texto, actual: v.texto, largo: v.largo, avisos: v.avisos || [] }; S.previos.push(v.texto); return k; });
+    S.tandas.unshift(ids);
+    render();
+  }
+
+  // ================= Resultados =================
+  function varianteHTML(k) {
+    const v = S.vars[k], elegida = String(S.elegida) === String(k), largo = v.actual.length > 900;
+    return '<article class="variante' + (elegida ? " elegida" : "") + '" id="a' + k + '">' +
+      '<div class="cab"><h3><span class="dot ' + esc(String(v.nombre).toLowerCase().replace(/[^a-z]/g, "")) + '"></span>' + esc(v.nombre) + (elegida ? '<span class="insignia">Elegido</span>' : "") + "</h3>" +
+      '<button type="button" class="btn" data-copiar="' + k + '">Copiar</button></div>' +
+      '<textarea id="v' + k + '" data-k="' + k + '" aria-label="Mensaje ' + esc(v.nombre) + '">' + esc(v.actual) + "</textarea>" +
+      '<div class="meta"><span>Puedes editar el texto antes de copiarlo.</span><span class="contador' + (largo ? " largo" : "") + '" id="c' + k + '">' + v.actual.length + " caracteres</span></div>" +
+      (v.avisos.length ? '<ul class="avisos">' + v.avisos.map(a => "<li>" + esc(a) + "</li>").join("") + "</ul>" : "") +
+      '<div id="conf' + k + '"></div></article>';
+  }
+  const guardadoHTML = () => '<div class="confirm"><span class="txt">Guardado en el repositorio. Nombre de campaña: <strong>' + esc(S.nombre) + "</strong></span></div>";
+
+  function render() {
+    let h = "";
+    if (S.sinGuia) h += '<div class="aviso-global">' + esc(S.pais) + ' no tiene guía de lenguaje propia todavía. Se redactó en español neutro; conviene que alguien del país lo revise.</div>';
+    if (S.aviso === "sin") h += '<div class="aviso-global">No hay mensajes históricos para el tipo ' + esc(S.tipo) + '. Se redactó solo con las reglas de marca; revísalo con más cuidado.</div>';
+    if (S.aviso === "mezcla") h += '<div class="aviso-global">Había pocos ejemplos de ' + esc(S.pais) + ' para este tipo, así que se usaron también de otros países y se adaptó el lenguaje.</div>';
+    h += '<div class="nombre-card"><p class="rot">Nombre sugerido para la campaña en Treble. Úsalo tal cual para poder medir su desempeño.</p>' +
+      '<div class="fila"><input id="nombreCamp" type="text" readonly value="' + esc(S.nombre) + '" aria-label="Nombre de la campaña"><button type="button" class="btn" data-copiarnombre="1">Copiar</button></div></div>';
+    S.tandas.forEach((ids, i) => {
+      const bloque = ids.map(varianteHTML).join("");
+      h += i === 0 ? bloque : '<details><summary>Tanda anterior ' + (S.tandas.length - i) + "</summary>" + bloque + "</details>";
+    });
+    h += '<div class="mas"><p>¿Ninguna te convence?</p><div class="fila"><input id="indicacion" type="text" maxlength="200" placeholder="Qué cambiarías (opcional). Ej: más corto, tono más cercano" aria-label="Qué cambiarías">' +
+      '<button type="button" class="btn lleno" id="btnMas">Generar otras 3</button></div></div>';
+    if (S.ejemplos.length) h += "<details><summary>Mensajes en los que se basó (" + S.ejemplos.length + ")</summary><ul>" +
+      S.ejemplos.map(x => "<li>" + esc(x.campana) + " · respuesta positiva " + (x.tasa_positiva * 100).toFixed(1) + "%" + (x.de_otro_pais ? " · de " + esc(x.pais) : "") + "</li>").join("") + "</ul></details>";
+    out.innerHTML = h;
+    Object.keys(S.guardado).forEach(k => { if (S.vars[k] && S.guardado[k] === S.vars[k].actual && $("conf" + k)) $("conf" + k).innerHTML = guardadoHTML(); });
+  }
+
+  async function copiar(texto, el) {
+    try { await navigator.clipboard.writeText(texto); }
+    catch (_) { try { el.select(); document.execCommand("copy"); } catch (__) {} }
+  }
+  function flash(b, ok) { const t = b.textContent; b.textContent = ok; b.classList.add("ok"); setTimeout(() => { b.textContent = t; b.classList.remove("ok"); }, 1800); }
+
+  out.addEventListener("input", ev => {
+    const t = ev.target; if (!t.dataset || t.dataset.k === undefined) return;
+    const k = t.dataset.k; S.vars[k].actual = t.value;
+    const c = $("c" + k); c.textContent = t.value.length + " caracteres"; c.classList.toggle("largo", t.value.length > 900);
+  });
+  out.addEventListener("click", async ev => {
+    const b = ev.target.closest("button"); if (!b || !S) return;
+    if (b.dataset.copiarnombre) { await copiar(S.nombre, $("nombreCamp")); return flash(b, "Copiado"); }
+    if (b.dataset.copiar !== undefined) {
+      const k = b.dataset.copiar, t = $("v" + k);
+      await copiar(t.value, t); flash(b, "Copiado");
+      const box = $("conf" + k);
+      if (S.guardado[k] === t.value) { box.innerHTML = guardadoHTML(); return; }
+      box.innerHTML = '<div class="confirm"><span class="txt">¿Es el mensaje que vas a usar? Se guarda tal como lo copiaste, editado o no.</span>' +
+        '<button type="button" class="btn lleno" data-guardar="' + k + '">Sí, guardarlo</button><button type="button" class="btn" data-no="' + k + '">No</button></div>';
+      return;
+    }
+    if (b.dataset.no !== undefined) { $("conf" + b.dataset.no).innerHTML = ""; return; }
+    if (b.dataset.guardar !== undefined) return guardar(b.dataset.guardar, b);
+    if (b.id === "btnMas") return masTanda(b);
+  });
+
+  async function guardar(k, b) {
+    const v = S.vars[k], box = $("conf" + k);
+    cargando(b, true, "Guardando…");
+    try {
+      const d = await api("guardar", {
+        id_generacion: S.id, pais: S.ctx.pais, tipo: S.ctx.tipo, alcance: S.ctx.alcance, programa: S.ctx.programa, descripcion: S.ctx.descripcion,
+        variables: S.ctx.variables, nombre_campana: S.nombre, variante: v.nombre,
+        texto_original: v.original, texto_final: v.actual, segundos: Math.round((Date.now() - S.t0) / 1000), regeneraciones: S.regen,
+      }, 30000);
+      S.nombre = d.nombre_campana; S.guardado = { [k]: v.actual }; S.elegida = k;
+      render();
+    } catch (ex) {
+      box.innerHTML = '<div class="confirm"><span class="txt">No se pudo guardar: ' + esc(ex.message) + ' Tu mensaje sigue aquí; intenta de nuevo.</span><button type="button" class="btn lleno" data-guardar="' + k + '">Reintentar</button></div>';
+    }
+  }
+  async function masTanda(b) {
+    const ind = $("indicacion").value.trim(); err.hidden = true;
+    cargando(b, true, "Generando…");
+    try { S.regen++; await pedirTanda(ind); }
+    catch (ex) { S.regen--; cargando(b, false, "Generar otras 3"); b.classList.add("lleno"); mostrarError("No se pudo generar otra tanda: " + ex.message); }
+  }
+</script>
+</body>
+</html>

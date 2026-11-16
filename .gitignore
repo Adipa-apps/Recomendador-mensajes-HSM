@@ -1,0 +1,4 @@
+.env*
+.vercel
+client_secret*.json
+node_modules
