@@ -127,6 +127,18 @@
   a.btn-google { display: block; width: 100%; padding: 12px; margin: 0; border-radius: var(--radius); background: var(--purple); color: #fff; font-weight: 600; text-align: center; text-decoration: none; }
   a.btn-google:hover { background: rgba(112, 78, 253, .85); }
   a.btn-google:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+  .brief { border: 1px dashed var(--purple); border-radius: var(--radius); background: var(--soft); padding: 12px; }
+  .brief.arrastrando { background: var(--lavender); }
+  .brief-ayuda { margin: 0; font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .brief-chip { display: flex; flex-direction: column; gap: 2px; }
+  .brief-nombre { font-weight: 500; font-size: 13px; word-break: break-all; }
+  .brief-acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .brief .error { margin-top: 0; }
+  .brief-pegar { margin-top: 8px; }
+  .brief-pegar textarea { margin-top: 8px; min-height: 100px; }
+  .faltantes { margin-bottom: 16px; }
+  .faltantes strong { display: block; font-size: 13px; margin-bottom: 6px; }
+  .faltantes .avisos { margin: 0; }
 </style>
 </head>
 <body>
@@ -193,8 +205,14 @@
       <label for="programa" id="lblPrograma">Programa</label>
       <input id="programa" type="text" placeholder="Ej: Diplomado en Terapia Cognitivo Conductual">
 
-      <label for="descripcion">Descripción corta <small>(qué quieres comunicar)</small></label>
+      <label for="descripcion">Descripción corta <small>(qué quieres comunicar; opcional si subes un brief)</small></label>
       <textarea id="descripcion" maxlength="500" placeholder="Ej: Últimas horas de lanzamiento con precio especial."></textarea>
+
+      <label id="lblBrief">Brief de la campaña <small>(opcional · PDF, DOCX o TXT, máx. 3 MB)</small></label>
+      <div id="briefBox" class="brief" role="group" aria-labelledby="lblBrief" aria-live="polite"></div>
+      <input type="file" id="briefFile" accept=".pdf,.docx,.txt" hidden>
+      <details class="brief-pegar"><summary>O pega el texto del brief</summary>
+        <textarea id="briefTexto" maxlength="20000" aria-label="Texto del brief"></textarea></details>
 
       <div class="seccion">
         <h3 class="paso"><span>3</span>Variables del mensaje</h3>
@@ -243,7 +261,7 @@
   const PAISES_RESPALDO = [{ codigo: "CL", nombre: "Chile" }, { codigo: "CO", nombre: "Colombia" }, { codigo: "MX", nombre: "México" }, { codigo: "AR", nombre: "Argentina" }];
   const TIPOS_RESPALDO = [
     ["FLASH", "Descuento flash", ["oferta", "cupon", "vigencia", "pago"]], ["PRECIO", "Cambio de precio", ["precio", "vigencia", "pago"]],
-    ["CAMPAÑA", "Campaña puntual", ["brief", "duracion", "dias_cupon", "cupon"]], ["INICIO", "Inicio de programa", ["fecha_inicio", "pago"]],
+    ["CAMPAÑA", "Campaña puntual", ["duracion", "dias_cupon", "cupon"]], ["INICIO", "Inicio de programa", ["fecha_inicio", "pago"]],
     ["COMPLEMENTARIA", "Base complementaria", ["oferta", "pago"]], ["VERSIÓN", "Versión anterior", ["fecha_inicio", "oferta"]],
     ["VISITA", "Visita al sitio web", []], ["CARRO", "Carro abandonado", []], ["EBOOK", "Descarga de ebook", []],
     ["SEMINARIO", "Asistentes a seminario", []], ["CLICK", "Click en correo", []], ["APERTURA", "Apertura de correo", []],
@@ -252,7 +270,7 @@
   const CATALOGO_RESPALDO = [
     ["nombre_programa", "Nombre del programa"], ["url_programa", "URL del programa"], ["precio", "Precio"], ["oferta", "Oferta o descuento"],
     ["cupon", "Cupón"], ["vigencia", "Vigencia o fecha límite"], ["pago", "Facilidades de pago"], ["fecha_inicio", "Fecha de inicio"],
-    ["coordinadora", "Coordinadora académica"], ["brief", "Brief de la campaña", true], ["duracion", "Duración de la campaña"],
+    ["coordinadora", "Coordinadora académica"], ["duracion", "Duración de la campaña"],
     ["dias_cupon", "Días con cupón adicional"], ["notas", "Notas adicionales", true],
   ].map(([clave, etiqueta, largo]) => ({ clave, etiqueta, largo: !!largo }));
   const PRESET_GENERICO = ["nombre_programa", "url_programa", "precio", "coordinadora"];
@@ -271,7 +289,8 @@
   }
   form.addEventListener("input", () => { if (!t0Form) t0Form = Date.now(); });
 
-  async function api(accion, payload, ms = 90000) {
+  const BRIEF_URL = "/api/brief";
+  async function api(accion, payload, ms = 90000, url = API_URL) {
     const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), ms);
     try {
       const headers = { "Content-Type": "application/json" };
@@ -279,10 +298,15 @@
         const c = getCodigo(); if (!c) { mostrarGate(""); throw new Error("Ingresa el código de acceso para continuar."); }
         headers["x-codigo"] = c; headers["x-nombre"] = encodeURIComponent(getNombre());
       }   // en modo Google la sesión viaja sola en una cookie segura
-      const r = await fetch(API_URL, { method: "POST", headers, body: JSON.stringify({ accion, ...payload }), signal: ctrl.signal });
+      const r = await fetch(url, { method: "POST", headers, body: JSON.stringify({ accion, ...payload }), signal: ctrl.signal });
       if (r.status === 401) { limpiarSesion(); mostrarGate(modoAcceso === "codigo" ? "Código incorrecto." : "Tu sesión expiró. Vuelve a entrar con tu cuenta de Adipa."); throw new Error("Sesión no válida."); }
       if (r.status === 403) { limpiarSesion(); mostrarGate("Tu cuenta no tiene acceso a esta herramienta."); throw new Error("Sin acceso."); }
-      if (!r.ok) throw new Error("El servidor respondió " + r.status + ".");
+      if (!r.ok) {
+        const e = await r.json().catch(() => null);
+        if (e && e.error) throw new Error(e.error);
+        if (r.status === 413) throw new Error("El archivo es demasiado grande para subirlo. El máximo es 3 MB.");
+        throw new Error("El servidor respondió " + r.status + ".");
+      }
       const d = await r.json();
       if (!d.ok) throw new Error(d.error || "No se pudo completar la acción.");
       return d;
@@ -338,8 +362,8 @@
           '<button type="button" class="seg-b" data-modo="valor" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "valor") + '">Escribir valor</button>' +
           '<button type="button" class="seg-b" data-modo="placeholder" data-c="' + esc(f.clave) + '" aria-pressed="' + (f.modo === "placeholder") + '">Dejar {{' + esc(f.clave) + "}}</button></div>" +
         (f.modo === "valor"
-          ? (f.largo ? '<textarea class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '">' + esc(f.valor) + "</textarea>"
-                     : '<input type="text" class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '" value="' + esc(f.valor) + '">')
+          ? (f.largo ? '<textarea class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '" placeholder="Déjalo vacío si está en el brief">' + esc(f.valor) + "</textarea>"
+                     : '<input type="text" class="valor" data-valor="' + esc(f.clave) + '" aria-label="Valor de ' + esc(f.etiqueta) + '" placeholder="Déjalo vacío si está en el brief" value="' + esc(f.valor) + '">')
           : "") +
       "</div>").join("") : '<p class="ayuda">Este tipo no trae variables predeterminadas. Agrega las que necesites.</p>';
     renderAgregar();
@@ -445,6 +469,57 @@
   const paisGuardado = (() => { try { return localStorage.getItem("hsm_pais") || ""; } catch (_) { return ""; } })();
   if (paisGuardado) llenarPaises(PAISES_RESPALDO, paisGuardado);
 
+  // ================= Brief (archivo o texto pegado) =================
+  const BRIEF_MAX_BYTES = 3 * 1024 * 1024;
+  let brief = null, briefSeq = 0;   // { leyendo } | { texto, caracteres, truncado } | { error }
+  function pintarBrief() {
+    let h = "";
+    if (!brief) h = '<p class="brief-ayuda">Arrastra un archivo aquí o <button type="button" class="btn" data-brief="subir">Subir archivo</button></p>';
+    else if (brief.leyendo) h = '<p class="brief-ayuda"><span class="spinner"></span>Leyendo ' + esc(brief.nombre) + "…</p>";
+    else if (brief.error) h = '<div class="error" role="alert"><strong>' + esc(brief.nombre) + ":</strong> " + esc(brief.error) + "</div>" +
+      '<div class="brief-acciones"><button type="button" class="btn" data-brief="subir">Elegir otro archivo</button><button type="button" class="btn" data-brief="quitar">Quitar</button></div>';
+    else h = '<div class="brief-chip"><span class="brief-nombre">' + esc(brief.nombre) + '</span><span class="ayuda" style="margin:0">' +
+      brief.caracteres.toLocaleString("es-CL") + " caracteres leídos" + (brief.truncado ? ". Es muy largo: se usarán solo los primeros 30.000" : "") + "</span></div>" +
+      '<div class="brief-acciones"><button type="button" class="btn" data-brief="subir">Reemplazar</button><button type="button" class="btn" data-brief="quitar">Quitar</button></div>';
+    $("briefBox").innerHTML = h;
+  }
+  const leerBase64 = file => new Promise((ok, no) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1] || "");
+    r.onerror = () => no(new Error("No se pudo abrir el archivo."));
+    r.readAsDataURL(file);
+  });
+  async function cargarBrief(file) {
+    const nombre = file.name || "archivo", seq = ++briefSeq;
+    const ext = (nombre.match(/\.([a-z0-9]+)$/i) || [, ""])[1].toLowerCase();
+    const falla = m => { brief = { nombre, error: m }; pintarBrief(); };
+    if (ext === "doc") return falla("Los archivos .doc (Word antiguo) no se pueden leer. Guárdalo como .docx o PDF y súbelo de nuevo.");
+    if (!["pdf", "docx", "txt"].includes(ext)) return falla("Formato no admitido. Sube un archivo PDF, DOCX o TXT.");
+    if (!file.size) return falla("El archivo está vacío.");
+    if (file.size > BRIEF_MAX_BYTES) return falla("El archivo pesa " + (file.size / 1048576).toFixed(1).replace(".", ",") + " MB. El máximo permitido es 3 MB.");
+    brief = { nombre, leyendo: true }; pintarBrief();
+    try {
+      const datos = await leerBase64(file);
+      const d = await api("brief", { nombre, datos }, 45000, BRIEF_URL);
+      if (seq !== briefSeq) return;   // el usuario cambió o quitó el archivo mientras se leía
+      brief = { nombre, texto: d.texto, caracteres: d.caracteres, truncado: !!d.truncado };
+    } catch (ex) {
+      if (seq !== briefSeq) return;
+      brief = { nombre, error: ex.message || "No se pudo leer el archivo." };
+    }
+    pintarBrief();
+  }
+  $("briefBox").addEventListener("click", e => {
+    const b = e.target.closest("[data-brief]"); if (!b) return;
+    if (b.dataset.brief === "subir") $("briefFile").click();
+    else { brief = null; briefSeq++; pintarBrief(); }
+  });
+  $("briefFile").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if (f) cargarBrief(f); });
+  ["dragenter", "dragover"].forEach(t => $("briefBox").addEventListener(t, e => { e.preventDefault(); $("briefBox").classList.add("arrastrando"); }));
+  ["dragleave", "drop"].forEach(t => $("briefBox").addEventListener(t, e => { e.preventDefault(); $("briefBox").classList.remove("arrastrando"); }));
+  $("briefBox").addEventListener("drop", e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) cargarBrief(f); });
+  pintarBrief();
+
   // ================= Generar (primera tanda) =================
   const nuevaSesion = () => ({ id: uuid(), regen: 0, ctx: null, tandas: [], vars: {}, k: 0, previos: [], nombre: "", elegida: null, guardado: {}, aviso: null, ejemplos: [], sinGuia: false });
   function cargando(b, on, texto) { b.disabled = on; b.innerHTML = on ? '<span class="spinner"></span>' + esc(texto) : esc(texto); }
@@ -454,17 +529,22 @@
     e.preventDefault(); err.hidden = true;
     const datos = {
       pais: $("pais").value, tipo: $("tipo").value, alcance: alcance(), programa: $("programa").value.trim(),
-      descripcion: $("descripcion").value.trim(), variables: varsPayload(),
+      descripcion: $("descripcion").value.trim(), variables: varsPayload(), brief_texto: "", brief_nombre: "",
     };
+    if (brief && brief.leyendo) return mostrarError("Espera a que termine de leerse el archivo del brief.");
+    if (brief && brief.error) return mostrarError("El archivo del brief no se pudo leer. Súbelo de nuevo, reemplázalo o quítalo antes de generar.");
+    const briefPegado = $("briefTexto").value.trim();
+    datos.brief_texto = [brief && brief.texto, briefPegado].filter(Boolean).join("\n\n");
+    datos.brief_nombre = brief && brief.texto ? brief.nombre : (briefPegado ? "texto pegado" : "");
     const faltan = [];
     if (!datos.pais) faltan.push("país");
     if (datos.pais === "__nuevo__" && ($("paisCodigo").value.trim().length < 2 || $("paisNombre").value.trim().length < 3)) faltan.push("código y nombre del país nuevo");
     if (!datos.tipo) faltan.push("tipo de mensaje");
     if (datos.tipo === "__nuevo__" && $("tipoNuevo").value.trim().length < 3) faltan.push("nombre del tipo nuevo");
     if (!datos.programa) faltan.push(datos.alcance === "generico" ? "tipo de programa" : "programa");
-    if (!datos.descripcion) faltan.push("descripción corta");
-    const sinValor = datos.variables.filter(v => v.modo === "valor" && !v.valor).map(v => v.etiqueta);
-    if (sinValor.length) faltan.push("el valor de " + sinValor.join(", ") + " (o déjala como marcador, o quítala)");
+    if (!datos.descripcion && !datos.brief_texto) faltan.push("descripción corta o brief");
+    const sinValor = datos.brief_texto ? [] : datos.variables.filter(v => v.modo === "valor" && !v.valor).map(v => v.etiqueta);
+    if (sinValor.length) faltan.push("el valor de " + sinValor.join(", ") + " (o déjala como marcador, quítala, o sube un brief que la traiga)");
     if (faltan.length) return mostrarError("Completa: " + faltan.join("; ") + ".");
 
     S = nuevaSesion(); S.t0 = t0Form || Date.now(); S.ctx = datos;
@@ -489,7 +569,7 @@
 
   async function pedirTanda(indicacion) {
     const d = await api("generar", { ...S.ctx, id_generacion: S.id, previos: S.previos, indicacion });
-    S.nombre = d.nombre_campana; S.aviso = d.sin_ejemplos ? "sin" : d.mezcla_paises ? "mezcla" : null; S.sinGuia = !!d.pais_sin_guia;
+    S.nombre = d.nombre_campana; S.aviso = d.sin_ejemplos ? "sin" : d.mezcla_paises ? "mezcla" : null; S.sinGuia = !!d.pais_sin_guia; S.faltantes = d.datos_faltantes || []; S.briefUsado = !!d.brief_usado;
     S.ejemplos = d.ejemplos || []; S.pais = d.pais; S.tipo = d.tipo;
     const ids = d.variantes.map(v => { const k = S.k++; S.vars[k] = { nombre: v.nombre, original: v.texto, actual: v.texto, largo: v.largo, avisos: v.avisos || [] }; S.previos.push(v.texto); return k; });
     S.tandas.unshift(ids);
@@ -516,6 +596,8 @@
     if (S.aviso === "mezcla") h += '<div class="aviso-global">Había pocos ejemplos de ' + esc(S.pais) + ' para este tipo, así que se usaron también de otros países y se adaptó el lenguaje.</div>';
     h += '<div class="nombre-card"><p class="rot">Nombre sugerido para la campaña en Treble. Úsalo tal cual para poder medir su desempeño.</p>' +
       '<div class="fila"><input id="nombreCamp" type="text" readonly value="' + esc(S.nombre) + '" aria-label="Nombre de la campaña"><button type="button" class="btn" data-copiarnombre="1">Copiar</button></div></div>';
+    if ((S.faltantes || []).length) h += '<div class="faltantes" role="status"><strong>' + (S.briefUsado ? "Faltan datos en el brief" : "Faltan datos para este mensaje") + '</strong><ul class="avisos">' +
+      S.faltantes.map(f => "<li>" + esc(f) + "</li>").join("") + "</ul></div>";
     S.tandas.forEach((ids, i) => {
       const bloque = ids.map(varianteHTML).join("");
       h += i === 0 ? bloque : '<details><summary>Tanda anterior ' + (S.tandas.length - i) + "</summary>" + bloque + "</details>";

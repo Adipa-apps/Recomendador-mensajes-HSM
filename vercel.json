@@ -1,3 +1,10 @@
 {
-  "functions": { "api/n8n.js": { "maxDuration": 60 } }
+  "functions": {
+    "api/n8n.js": {
+      "maxDuration": 60
+    },
+    "api/brief.js": {
+      "maxDuration": 30
+    }
+  }
 }

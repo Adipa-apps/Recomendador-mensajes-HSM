@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "google-auth-library": "^9.15.0"
+    "google-auth-library": "^9.15.0",
+    "mammoth": "^1.13.0",
+    "unpdf": "^1.9.1"
   }
 }
